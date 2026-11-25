@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fundamental-event-trader"
+version = "0.1.0"
+description = "Point-in-time SEC fundamentals and event research with fail-closed data gates"
+requires-python = ">=3.12"
+dependencies = ["numpy>=1.26,<2", "pandas>=2.2,<3", "pyarrow>=17,<22", "requests>=2.32,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.9,<1"]
+
+[project.scripts]
+fundamental-event-trader = "fundamental_event_trader.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
