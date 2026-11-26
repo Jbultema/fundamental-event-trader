@@ -7,7 +7,7 @@ name = "fundamental-event-trader"
 version = "0.1.0"
 description = "Point-in-time SEC fundamentals and event research with fail-closed data gates"
 requires-python = ">=3.12"
-dependencies = ["numpy>=1.26,<2", "pandas>=2.2,<3", "pyarrow>=17,<22", "requests>=2.32,<3"]
+dependencies = ["numpy>=1.26,<2", "pandas>=2.2,<3", "pyarrow>=17,<22", "requests>=2.32,<3", "exchange-calendars>=4.5,<5", "feedparser>=6,<7", "trafilatura>=2,<3", "lxml>=6.1,<7"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.9,<1"]

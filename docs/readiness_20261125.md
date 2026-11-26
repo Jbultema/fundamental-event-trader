@@ -11,8 +11,8 @@ annual versus quarterly denominators, unmatched cashflow years, accounting-tag c
 insider transaction types, XML entities, missing event securities, historical membership,
 delisted terminal intervals, source-byte integrity and unmatured outcomes.
 
-Forty-eight hypotheses are registered, not backtested. Matched event-study machinery is separate
-from a tradable portfolio CAGR, and neither can authorize allocation. Content-dependent 13D/13G
+Forty-eight hypotheses are registered, not backtested on qualified real data. Matched event-study machinery is separate
+from the new tradable portfolio replay, and neither can authorize allocation. Content-dependent 13D/13G
 and 8-K hypotheses remain disabled; filing metadata is not a directional signal.
 
 ## Actual source evidence
@@ -37,8 +37,8 @@ performance evidence.
 - Qualify historical security identity, membership, delisting and adjusted price coverage.
 - Finish content-specific ownership-change and 8-K interpretation, then register exact event
   definitions before viewing their economic outcomes.
-- Run clustered/matched event studies, then build a self-financing portfolio policy for Portfolio
-  Lab admission only if it provides defensible incremental evidence.
+- Run the implemented event-study and self-financing portfolio research pipelines on qualified
+  real data; seek Portfolio Lab admission only if they provide defensible incremental evidence.
 
 No successful SEC download, strategy alpha, portfolio CAGR or live readiness is claimed.
 
@@ -49,3 +49,44 @@ signals/prices and missing benchmark marks. Event-study paths validate security 
 observations throughout the holding interval. These are additional software safeguards, not
 real-data hypothesis results. The cross-system review is maintained in Portfolio Lab under
 `docs/system_assessment_20261125.md`; its verifier runs this repository's isolated environment.
+
+## Portfolio And Operating Implementation
+
+The follow-up adds content-specific fixed policies, a regular-session next-open portfolio engine,
+development-only candidate selection, purged chronological validation and lockbox diagnostics,
+annual expanding walk-forward replay with actual switch accounting, latency/cost stresses,
+regime diagnostics and paired block intervals. Software tests exercise the complete research
+path on explicit synthetic fixtures; fixtures cannot configure a real-data running specialist.
+
+The operational interface now includes hash-bound daily observations, frozen-policy continuity
+checks, native report audits and a Portfolio Lab comparative export. The common engine also
+supports terminal cash, including bankruptcy, so an eventual event specialist will not silently
+drop failed companies. Portfolio Lab has a dedicated Event research workspace and an explicit
+fourth-specialist comparative admission path.
+
+The new official request in `data/captures/readiness_20261125_implementation` again returned
+HTTP 403. No qualified dataset or real-data strategy results were created. The current operating
+status remains blocked with zero real-data hypotheses tested. [Operations](operations.md) documents
+the input contract, commands and remaining evidence gates. No live-readiness claim is made.
+
+## Earlier Local Verification
+
+- Final event-repository suite: 93 passed; Ruff and whitespace checks passed.
+- Evidence: `reports/verification/implementation_release_20261125.xml`.
+- Source identity: `83387923d77fedf0342ddbe5801bac89c32c4751b3bf2b571889bc06912a3cf3`.
+- Synthetic end-to-end tests exercise six available fixture policies, all three chronological
+  partitions, nine execution stresses and stitched expanding walk-forward accounting. These
+  are not six real-data strategies or evidence of profitable CAGR.
+- The real-data CLI was exercised and returned a structured blocked result for the absent
+  qualified dataset. It did not publish fabricated real-data research.
+- Portfolio Lab's final integration suite passed 147 tests. Its seven-workspace desktop/mobile
+  browser acceptance passed, including the dedicated event view and downloaded readout.
+
+Implementation and integration progressed. Real-data validation, prospective shadow evidence
+and allocation readiness remain incomplete.
+
+## Current Follow-Up
+
+The [readiness continuation](readiness_continuation_20261125.md) supersedes those implementation
+counts. The latest suites passed 133 native event tests and 158 Portfolio Lab tests. Source access,
+real-data hypothesis testing and allocation admission remain blocked, not completed by those tests.

@@ -62,6 +62,17 @@ def test_complete_synthetic_contract_unlocks_event_study_not_strategy(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "manifest",
+    [[], None, True, {"criteria": [], "artifacts": {}}, {"criteria": {"x": True}, "artifacts": {}}],
+)
+def test_malformed_manifest_remains_a_blocked_qualification(tmp_path, manifest):
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    status = qualify(tmp_path)
+    assert status["status"] == "blocked"
+    assert status["historical_event_study_allowed"] is False
+
+
+@pytest.mark.parametrize(
     "kind",
     [
         "future_identity",
@@ -69,8 +80,12 @@ def test_complete_synthetic_contract_unlocks_event_study_not_strategy(tmp_path):
         "post_delisting_prices",
         "no_dead_securities",
         "unbound_evidence",
-        "infinite_price", "missing_benchmark", "nan_signal", "empty_events",
-        "invalid_identity_interval", "duplicate_prices",
+        "infinite_price",
+        "missing_benchmark",
+        "nan_signal",
+        "empty_events",
+        "invalid_identity_interval",
+        "duplicate_prices",
     ],
 )
 def test_adversarial_dataset_cannot_pass(kind, tmp_path):

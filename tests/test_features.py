@@ -77,8 +77,9 @@ def test_insider_cluster_counts_distinct_owners_by_publication_not_transaction_d
             "cik": ["123"] * 3,
             "accepted_at": ["2020-01-01T20:00:00Z", "2020-01-02T20:00:00Z", "2020-02-01T20:00:00Z"],
             "code": ["P"] * 3,
-            "owner_cik": ["a", "a", "b"],
+            "owner_cik": ["555", "555", "666"],
             "dollars": [100.0, 200.0, 500.0],
+            "derivative_transaction": False,
         }
     )
     result = insider_cluster(rows, "2020-01-10T20:00:00Z")

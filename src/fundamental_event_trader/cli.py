@@ -2,52 +2,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
-import pandas as pd
-
-from fundamental_event_trader.features import accounting_features, event_study, registry
+from fundamental_event_trader.features import event_study, registry
 from fundamental_event_trader.qualification import qualify, validate_dataset
 from fundamental_event_trader.sec import (
+    USER_AGENT,
+    DataGateError,
     capture,
     import_swing_sidecar,
-    normalize_facts,
-    normalize_submissions,
     sha,
 )
 
 
 def normalize_capture(folder: Path, output: Path):
-    metadata = json.loads((folder / "manifest.json").read_text())
-    if metadata["status"] != "access_passed_not_universe_qualified":
-        raise ValueError("Official data capture did not pass access/schema gates")
-    for document in metadata["documents"]:
-        if sha(folder / document["path"]) != document["sha256"]:
-            raise ValueError("Captured official source changed")
-    submissions = normalize_submissions(
-        json.loads((folder / "submissions.json").read_text()), metadata["captured_at_utc"]
-    )
-    facts = normalize_facts(json.loads((folder / "companyfacts.json").read_text()), submissions)
-    output.mkdir(parents=True, exist_ok=False)
-    submissions.to_parquet(output / "filings.parquet", index=False)
-    facts.to_parquet(output / "facts.parquet", index=False)
-    features = accounting_features(facts, metadata["captured_at_utc"], metadata["cik"])
-    # Missing concepts are explicit nulls, never zero-valued bullish signals.
-    (output / "features.json").write_text(pd.Series(features).to_json(indent=2) + "\n")
-    manifest = {
-        "source_manifest_sha256": sha(folder / "manifest.json"),
-        "filings": len(submissions),
-        "facts": len(facts),
-        "capture_time": metadata["captured_at_utc"],
-        "authority": "research_only",
-        "historical_strategy_authorized": False,
-        "limitation": "Only accessions in the recent submissions payload are admitted; older facts are omitted until archived submissions are acquired.",
-        "artifacts": {p.name: sha(p) for p in output.iterdir() if p.is_file()},
-    }
-    (output / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    from fundamental_event_trader.archive import normalize
+
+    return normalize(folder, output)
 
 
-def main():
+def _main():
     parser = argparse.ArgumentParser(
         description="Public-data fundamental/event research; fail-closed"
     )
@@ -55,6 +30,7 @@ def main():
     p = sub.add_parser("capture")
     p.add_argument("--cik", required=True)
     p.add_argument("--output", required=True, type=Path)
+    p.add_argument("--user-agent", default=os.getenv("SEC_USER_AGENT", USER_AGENT))
     p = sub.add_parser("normalize")
     p.add_argument("--capture", required=True, type=Path)
     p.add_argument("--output", required=True, type=Path)
@@ -66,12 +42,131 @@ def main():
     p.add_argument("--output", type=Path)
     p = sub.add_parser("registry")
     p.add_argument("--output", type=Path)
+    p = sub.add_parser("news-refresh", help="Read public financial news; no historical-strategy admission")
+    p.add_argument("--output", type=Path)
+    p.add_argument("--max-articles", type=int, default=12)
+    p.add_argument("--budget-seconds", type=float, default=75.)
+    p = sub.add_parser("news-screen-freeze", help="Freeze an ETF news-proxy performance-screen protocol")
+    p.add_argument("--bundle", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p = sub.add_parser("news-screen-build", help="Acquire historical news proxies and export frozen targets; no strategy admission")
+    p.add_argument("--registry", type=Path, required=True)
+    p = sub.add_parser("news-vintage-freeze", help="Freeze a historical-released-vintage news timing screen")
+    p.add_argument("--bundle", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p = sub.add_parser("news-vintage-build", help="Acquire the complete historical monthly news-index release census")
+    p.add_argument("--registry", type=Path, required=True)
+    p.add_argument("--resume", action="store_true", help="Reuse hash-checked releases after transport failure; never retry denied access")
+    p = sub.add_parser("news-vintage-audit", help="Reconstruct primary news-vintage features and targets from raw release bytes")
+    p.add_argument("--screen", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--latest-screen", type=Path)
+    p = sub.add_parser("news-maturity-freeze", help="Freeze a fixed historical-news observation-maturity follow-up")
+    p.add_argument("--parent", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p = sub.add_parser("news-maturity-build", help="Build fixed maturity-adjusted targets from sealed released histories")
+    p.add_argument("--registry", type=Path, required=True)
     p = sub.add_parser("research")
     p.add_argument("--dataset", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p = sub.add_parser("portfolio-research")
+    p.add_argument("--dataset", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p = sub.add_parser("audit-research")
+    p.add_argument("--report", type=Path, required=True)
+    for name in ("status", "daily", "configure"):
+        p = sub.add_parser(name)
+        p.add_argument("--dataset", type=Path)
+        p.add_argument("--report", type=Path)
+        if name == "daily":
+            p.add_argument("--output", type=Path, required=True)
+            p.add_argument("--refresh-news", action="store_true")
+    p = sub.add_parser("import-sec-bulk")
+    p.add_argument("--submissions", type=Path, required=True)
+    p.add_argument("--companyfacts", type=Path, required=True)
+    p.add_argument("--cik", required=True)
+    p.add_argument("--captured-at", required=True)
+    p.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    if args.command == "capture":
-        path = capture(args.cik, args.output)
+    if args.command == "news-maturity-freeze":
+        from fundamental_event_trader.news_maturity_research import freeze
+
+        print(freeze(args.parent, args.output))
+    elif args.command == "news-maturity-build":
+        from fundamental_event_trader.news_maturity_research import build
+
+        print(build(args.registry))
+    elif args.command == "news-vintage-freeze":
+        from fundamental_event_trader.news_vintage_research import freeze
+
+        print(freeze(args.bundle, args.output))
+    elif args.command == "news-vintage-build":
+        from fundamental_event_trader.news_vintage_research import build
+
+        print(build(args.registry, resume=args.resume))
+    elif args.command == "news-vintage-audit":
+        from fundamental_event_trader.news_vintage_audit import audit
+
+        print(json.dumps(audit(args.screen, args.output, latest_screen=args.latest_screen), indent=2))
+    elif args.command == "news-screen-freeze":
+        from fundamental_event_trader.news_research import freeze
+
+        print(freeze(args.bundle, args.output))
+    elif args.command == "news-screen-build":
+        from fundamental_event_trader.news_research import acquire, build
+
+        print(json.dumps(acquire(args.registry), indent=2))
+        print(build(args.registry))
+    elif args.command == "news-refresh":
+        from datetime import UTC, datetime
+
+        from fundamental_event_trader.news import refresh, status
+
+        output = args.output or Path("data/news/captures") / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+        refresh(Path.cwd(), output, max_articles=args.max_articles, budget=args.budget_seconds)
+        current = status(Path.cwd())
+        print(json.dumps({key: value for key, value in current.items() if key not in {"items", "limits"}}, indent=2))
+    elif args.command == "portfolio-research":
+        from fundamental_event_trader.research import run
+
+        print(run(args.dataset, args.output))
+    elif args.command == "audit-research":
+        from fundamental_event_trader.operating import audit_report
+
+        print(json.dumps(audit_report(args.report), indent=2))
+    elif args.command == "status":
+        from fundamental_event_trader.operating import status
+
+        result = status(Path.cwd(), dataset=args.dataset, report=args.report)
+        print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
+        if result["status"] == "blocked":
+            raise SystemExit(2)
+    elif args.command == "daily":
+        from fundamental_event_trader.operating import daily
+
+        print(daily(Path.cwd(), args.output, dataset=args.dataset, report=args.report, refresh_news=args.refresh_news))
+        if json.loads((args.output / "status.json").read_text())["status"] == "blocked":
+            raise SystemExit(2)
+    elif args.command == "configure":
+        from fundamental_event_trader.operating import configure
+
+        if args.dataset is None or args.report is None:
+            parser.error("configure requires --dataset and --report")
+        print(configure(Path.cwd(), args.dataset, args.report))
+    elif args.command == "import-sec-bulk":
+        from fundamental_event_trader.archive import extract_issuer
+
+        print(
+            extract_issuer(
+                args.submissions,
+                args.companyfacts,
+                args.cik,
+                args.output,
+                captured_at=args.captured_at,
+            )
+        )
+    elif args.command == "capture":
+        path = capture(args.cik, args.output, user_agent=args.user_agent)
         print(path)
         if json.loads(path.read_text())["status"] == "blocked":
             raise SystemExit(2)
@@ -136,6 +231,23 @@ def main():
             )
             + "\n"
         )
+
+
+def main():
+    try:
+        _main()
+    except (DataGateError, OSError, KeyError, TypeError, AssertionError) as exc:
+        print(
+            json.dumps(
+                {
+                    "status": "blocked",
+                    "action_authorized": False,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc)[:400],
+                }
+            )
+        )
+        raise SystemExit(2) from exc
 
 
 if __name__ == "__main__":

@@ -28,6 +28,13 @@ def qualify(dataset: Path | None = None) -> dict:
     else:
         try:
             metadata = json.loads((dataset / "manifest.json").read_text())
+            if (
+                not isinstance(metadata, dict)
+                or not isinstance(metadata.get("criteria"), dict)
+                or not isinstance(metadata.get("artifacts"), dict)
+                or any(not isinstance(value, dict) for value in metadata["criteria"].values())
+            ):
+                raise DataGateError("Dataset manifest and criterion evidence must be objects")
             for criterion in CRITERIA:
                 evidence = metadata.get("criteria", {}).get(criterion, {})
                 if evidence.get("passed") is not True or not evidence.get("evidence_artifact"):
@@ -85,11 +92,10 @@ def validate_dataset(dataset: Path):
     ):
         raise DataGateError("Require unique timestamped adjusted-open prices")
     values = prices.to_numpy(dtype=float)
-    if (
-        np.isinf(values).any() or (values <= 0).any()
-        or prices["SPY"].isna().any()
-    ):
-        raise DataGateError("Observed prices must be finite and positive with complete SPY coverage")
+    if np.isinf(values).any() or (values <= 0).any() or prices["SPY"].isna().any():
+        raise DataGateError(
+            "Observed prices must be finite and positive with complete SPY coverage"
+        )
     required = {"security_id", "cik", "valid_from", "valid_until", "known_at"}
     if not required <= set(identity) or not {
         "security_id",
@@ -107,8 +113,13 @@ def validate_dataset(dataset: Path):
     valid_from = pd.to_datetime(identity.valid_from, utc=True)
     valid_until = pd.to_datetime(identity.valid_until, utc=True)
     known_at = pd.to_datetime(identity.known_at, utc=True)
+    for column in ("valid_from", "valid_until", "known_at"):
+        for value in identity[column]:
+            timestamp(value)
     if (
-        valid_from.isna().any() or valid_until.isna().any() or known_at.isna().any()
+        valid_from.isna().any()
+        or valid_until.isna().any()
+        or known_at.isna().any()
         or (valid_until <= valid_from).any()
     ):
         raise DataGateError("Invalid historical identity intervals")
